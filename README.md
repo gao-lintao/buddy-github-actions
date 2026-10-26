@@ -1,7 +1,7 @@
 # Buddy 加油站 · GitHub Actions 云端自动签到
 
 把 WorkBuddy「Buddy 加油站」的**每日签到 + 派猫猫旅行**放到 GitHub 免费的 `schedule` 定时任务上，  
-用云端 runner 执行，**不需要任何常开设备**。每天北京时间 09:00 自动跑一次，结果推送到微信。
+用云端 runner 执行，**不需要任何常开设备**。每天北京时间 06:00 自动跑一次，结果推送到微信。
 
 ## 设计要点
 
@@ -17,7 +17,7 @@
 ## 目录结构
 
 ```
-.github/workflows/daily-points.yml   # 定时任务（UTC 01:00 = 北京 09:00）
+.github/workflows/daily-points.yml   # 定时任务（UTC 22:00 = 北京 06:00）
 scripts/buddy_actions.py             # 云端客户端（纯标准库）
 scripts/refresh_secret.sh            # 本机刷新脚本：导出接口令牌 → 写仓库 Secret（有 gh 自动写，无 gh 导出本地文件）
 ```
@@ -90,6 +90,6 @@ WORKBUDDY_TOKEN="$TOKEN" SERVERCHAN_SCKEY=xxxx \
 ## 三、常见问题
 
 - **令牌失效**：重新运行 `refresh_secret.sh` 覆盖 Secret 即可（长效令牌对应账号钥匙，请注意保管）。
-- **时区**：GitHub cron 为 UTC，`0 1 * * *` 即北京 09:00；如需改时间改这一行即可。
+- **时区**：GitHub cron 为 UTC，`0 22 * * *` 即北京 06:00；如需改时间改这一行即可。
 - **猫猫当天已派**：脚本检测到 `daily_limit_reached` 或 `traveling` 会自动跳过新趟，不影响签到。
 - **微信没收到**：检查对应 Secret 是否填对；客户端日志会打印推送结果。

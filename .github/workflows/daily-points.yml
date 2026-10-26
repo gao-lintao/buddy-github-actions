@@ -2,8 +2,8 @@ name: Buddy加油站每日签到
 
 on:
   schedule:
-    # GitHub Actions 的 cron 为 UTC。北京 09:00 = UTC 01:00。
-    - cron: '0 1 * * *'
+    # GitHub Actions 的 cron 为 UTC。北京 06:00 = UTC 22:00（前一天）。
+    - cron: '0 22 * * *'
   workflow_dispatch: {}      # 允许在 Actions 页面手动触发
 
 permissions:
