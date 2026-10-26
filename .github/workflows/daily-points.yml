@@ -1,0 +1,35 @@
+name: Buddy加油站每日签到
+
+on:
+  schedule:
+    # GitHub Actions 的 cron 为 UTC。北京 09:00 = UTC 01:00。
+    - cron: '0 1 * * *'
+  workflow_dispatch: {}      # 允许在 Actions 页面手动触发
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 准备 Python（不硬编码版本）
+        run: |
+          PYTHON="$(command -v python3)"
+          echo "PYTHON=$PYTHON" >> "$GITHUB_ENV"
+          "$PYTHON" --version
+
+      - name: 执行每日签到与派猫
+        env:
+          # 三个密钥均来自仓库 Settings → Secrets，云端不读任何本机登录态
+          # 主用 WORKBUDDY_TOKEN（本机导出的接口令牌）；如需 set-and-forget 也可改用 WORKBUDDY_REFRESH_TOKEN
+          WORKBUDDY_TOKEN: ${{ secrets.WORKBUDDY_TOKEN }}
+          WORKBUDDY_REFRESH_TOKEN: ${{ secrets.WORKBUDDY_REFRESH_TOKEN }}
+          SERVERCHAN_SCKEY: ${{ secrets.SERVERCHAN_SCKEY }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: |
+          "$PYTHON" scripts/buddy_actions.py

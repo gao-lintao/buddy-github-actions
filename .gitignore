@@ -1,0 +1,11 @@
+# 日志与本地缓存
+*.log
+__pycache__/
+*.pyc
+
+# 本地密钥/凭据（绝不可提交）
+*.json
+checkin-rt.json
+checkin-cred.json
+.env*
+!.env.example
