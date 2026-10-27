@@ -10,6 +10,8 @@ WorkBuddy · Buddy加油站 云端自动任务客户端（纯标准库，零第�
   3. 微信推送：签到结论 与 猫猫状态 分两段（## 一、签到 / ## 二、猫猫旅行）展示。
   4. 猫猫失败不影响签到结论：签到成功即整体成功（退出码 0）。
   5. 令牌明文绝不打印、绝不入库；所有接口原始返回在输出前递归脱敏。
+  6. 令牌到期提醒：根据 TOKEN_ISSUED + TOKEN_VALID_DAYS 估算剩余天数，剩余 ≤ TOKEN_WARN_DAYS
+     时，在微信推送标题与正文加醒目续签提醒（双保险，避免忘记续签导致任务静默失效）。
 
 接口名称均以实际请求返回为准（见下方 *_PATH 常量，已对照线上接口核对）。
 """
@@ -38,6 +40,11 @@ TRAVEL_DEPART_PATH = "/activity/growth/buddy/travel/depart"        # POST 派遣
 TRAVEL_CONFIG_PATH = "/activity/growth/buddy/travel/config"        # GET 地点配置
 
 HTTP_TIMEOUT = 15
+
+# 令牌有效期与到期提醒（续签时由 setup.py 自动回写为当天日期）
+TOKEN_ISSUED = "2026-10-27"   # 最近一次写入 WORKBUDDY_TOKEN 的日期（估算基准）
+TOKEN_VALID_DAYS = 28          # access token 有效期约 28 天
+TOKEN_WARN_DAYS = 7            # 剩余天数 ≤ 此值时，微信推送加醒目续签提醒
 
 # 需脱敏的字段（接口返回里绝不该出现的明文令牌/隐私）
 _SENSITIVE_KEYS = ("accesstoken", "refreshtoken", "token", "authorization",
@@ -72,6 +79,15 @@ def beijing_hm(ts):
     if not isinstance(ts, (int, float)):
         return ""
     return time.strftime("%H:%M", time.gmtime(ts + 8 * 3600))
+
+
+def token_days_left():
+    """根据 TOKEN_ISSUED + TOKEN_VALID_DAYS 估算令牌剩余天数（仅作提醒参考）。"""
+    try:
+        issued = time.mktime(time.strptime(TOKEN_ISSUED, "%Y-%m-%d"))
+        return int(TOKEN_VALID_DAYS - (time.time() - issued) / 86400)
+    except Exception:
+        return None
 
 
 def _http(domain, path, token, method="POST", payload=None):
@@ -280,6 +296,14 @@ def build_desp(ck, tv):
     else:
         lines.append("- %s" % (tv.get("message") or "查询失败"))
     lines.append("")
+
+    # 令牌到期提醒（双保险：即使一次性定时提醒被忽略，每日推送也会反复提示）
+    days_left = token_days_left()
+    if days_left is not None and days_left <= TOKEN_WARN_DAYS:
+        lines.append("⚠️ **WORKBUDDY_TOKEN 将于 %d 天后到期，请尽快续签！**" % days_left)
+        lines.append("续签方式：直接对 WorkBuddy 说「帮我续签 WORKBUDDY_TOKEN」即可自动续写。")
+
+    lines.append("")
     lines.append("> 自动任务 · %s" % time.strftime("%Y-%m-%d %H:%M"))
     return "\n".join(lines)
 
@@ -325,8 +349,12 @@ def main():
         tv = {"available": False, "message": "猫猫流程异常：%s" % e, "raw": {}}
         log("⚠️ 猫猫流程异常（不影响签到结论）：%s" % e)
 
-    # 4) 组装并推送（两段分明）
-    title = "Buddy加油站 · %s" % ("签到成功" if ck.get("success") else "签到失败")
+    # 4) 组装并推送（两段分明 + 令牌到期提醒）
+    days_left = token_days_left()
+    if days_left is not None and days_left <= TOKEN_WARN_DAYS:
+        title = "⚠️令牌%d天后到期 · %s" % (days_left, "签到成功" if ck.get("success") else "签到失败")
+    else:
+        title = "Buddy加油站 · %s" % ("签到成功" if ck.get("success") else "签到失败")
     desp = build_desp(ck, tv)
     push_wechat(title, desp)
 
